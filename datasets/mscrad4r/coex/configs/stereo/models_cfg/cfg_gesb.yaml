@@ -1,0 +1,86 @@
+########################################### ################
+device: [0, 1]
+precision: 16
+
+###########################################################
+model:
+  name: 'GESB'
+
+  stereo:
+    name: 'GESB'
+    min_disparity: 0  # 
+    max_disparity: &d 192
+
+    topk: 2
+
+    downscale: 1
+    pad: 128
+
+    backbone: 
+      type: 'mobilenetv2_100'
+      from_scratch: False
+      cfg_path: './configs/backbone.yaml'
+    hr_chans: [32, 48, 64]
+    conv3d: True
+
+    aggregation_channels: [8, 16, 32, 64]
+    init_disp: True
+    
+    shared_backbone: True
+    corr_implementation: 'reg'
+    corr_levels: 4
+    corr_radius: 4
+    n_downsample: 2
+    slow_fast_gru: True
+    n_gru_layers: 3
+    fmap_dim: 32
+    hidden_dims: [64, 64, 64]
+
+    mixed_precision: True
+
+    # DEQ
+    hyper: True
+    wnorm: True
+    f_solver: 'Anderson'
+    b_solver: 'Anderson'
+    f_thres: 18
+    b_thres: 18
+    stop_mode: 'abs'
+    eval_factor: .5
+
+    sliced_core: False
+    ift: False
+    safe_ift: False
+    n_losses: 2
+    indexing: []
+    sup_all: False
+    phantom_grad: [2]
+    tau: 1.
+
+    sradius_mode: False
+
+###########################################################
+logging: 
+  path: './logs/stereo'
+
+training:
+  load_path: null  # 'SceneFlow/version_1/checkpoints/last.ckpt'
+  save_version: 1
+
+  thresh_disp: True
+
+  lr: 0.001
+  max_epochs: 15
+  milestones: []
+  gamma: 0.1
+  batch_size: 2
+  num_workers: 4
+  swa: False
+  # training_scales_weighting: [1, 0.31, 0.35, 0.39, 0.43, 0.48, 0.53, 0.59, 0.66, 0.73, 0.81, 0.9, 1]
+  training_scales_weighting: [1.5, 0.45, 0.55, 0.9, 1]
+
+testing:
+  save_disp_imgs: True
+  save_disp_mode: 'plasma'  # 'kitti'/'jet'/'plasma'
+  compute_metrics: True
+  gt_available: True

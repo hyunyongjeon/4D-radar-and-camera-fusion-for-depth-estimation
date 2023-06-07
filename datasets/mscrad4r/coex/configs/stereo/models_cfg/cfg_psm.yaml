@@ -1,0 +1,42 @@
+########################################### ################
+device: [0, 1]
+precision: 16
+
+###########################################################
+model:
+  name: 'PSMNet'
+
+  stereo:
+    name: 'PSMNet'
+    min_disparity: 0  # 
+    max_disparity: 192
+
+    corr_volume: False
+    gce: False
+    multiple_gce: False
+    
+    regression:
+      top_k: 192
+
+###########################################################
+logging: 
+  path: './logs/stereo'
+
+training:
+  load_path: null  # 'SceneFlow/version_1/checkpoints/last.ckpt'
+  save_version: 1
+
+  lr: 0.001
+  max_epochs: 15
+  milestones: []
+  gamma: 0.1
+  batch_size: 2
+  num_workers: 4
+  swa: False
+  training_scales_weighting: [1, 0.7, 0.5]
+
+testing:
+  save_disp_imgs: True
+  save_disp_mode: 'plasma'  # 'kitti'/'jet'/'plasma'
+  compute_metrics: True
+  gt_available: True

@@ -5,3 +5,10 @@ __pycache__
 *.npz
 kitti_data
 models
+
+*pkl
+*png
+data/*
+*.swp
+*tfevents*
+datasets/mscrad4r/coex/logs/*
