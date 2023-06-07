@@ -1,0 +1,65 @@
+########################################### ################
+device: [0]
+precision: 16
+
+logging: 
+  path: './logs/synthesis'
+
+dataset:
+  name: 'CARLA'
+
+  reverse: False
+
+  path: '../data/datasets/Stereo_CARLA_Dataset'
+  subset: 'train_K-kitti_b-05'  
+    # 'train'/'test'_'K-kitti'/'K-driving'/'K-all'_'b-02'/'b-05'/'b-10'/'b-all'
+  val_split: True
+  train_aug:
+
+    th: 320
+    tw: 960
+
+    horizontal_flip: False
+    RandomShiftRotate: True
+    RGBShiftStereo: True
+    GaussNoiseStereo: True
+    RandomBrightnessContrastStereo: True
+
+    # Color aug following "Learning stereo from single images. Watson et al. ECCV2020"
+    aug_color: False
+    aug_color_brightness: 0.2
+    aug_color_contrast: 0.2
+    aug_color_saturation: 0.2
+    aug_color_hue: 0.01
+
+    aug_zoom: False
+    aug_zoom_use_sr: True
+    aug_zoom_presets: null
+    aug_zoom_min_zoom_ratio: 0.5
+    aug_zoom_max_zoom_ratio: 1.5
+    aug_zoom_model_path: 'logs/sr/Real-ESRGAN/RealESRGAN_x2plus.pth'
+    aug_zoom_half_precision: True
+    
+    aug_baseline: True
+    aug_baseline_presets: null
+    aug_baseline_min_baseline_ratio: 0.4
+    aug_baseline_max_baseline_ratio: 2.0
+
+    aug_baseline_generated: False
+    aug_baseline_generated_nn: False
+
+    max_disparity: 192
+
+training:
+  load_path: null  # 'SceneFlow/version_1/checkpoints/last.ckpt'
+  save_version: 1
+
+  lr: 0.001
+  max_epochs: 8
+  milestones: [6]
+  gamma: 0.1
+  batch_size: 8
+  num_workers: 16
+  swa: False
+  training_scales_weighting: [1, 0.3]
+

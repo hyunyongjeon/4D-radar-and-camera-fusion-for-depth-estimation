@@ -1,0 +1,39 @@
+########################################### ################
+device: [0, 1]
+precision: 16
+
+###########################################################
+model:
+  name: 'SGBM'
+  
+  stereo:
+    name: 'SGBM'
+    min_disparity: 0  # 
+    max_disparity: 192
+    backbone: 
+      type: 'mobilenetv2_100'
+      from_scratch: False
+      cfg_path: './configs/backbone.yaml'
+
+###########################################################
+logging: 
+  path: './logs/stereo'
+
+training:
+  load_path: null  # 'SceneFlow/version_1/checkpoints/last.ckpt'
+  save_version: 1
+
+  lr: 0.001
+  max_epochs: 10
+  milestones: [7]
+  gamma: 0.1
+  batch_size: 8
+  num_workers: 8
+  swa: True
+  training_scales_weighting: [1, 0.3]
+
+testing:
+  save_disp_imgs: True
+  save_disp_mode: 'plasma'  # 'kitti'/'jet'/'plasma'
+  compute_metrics: True
+  gt_available: True

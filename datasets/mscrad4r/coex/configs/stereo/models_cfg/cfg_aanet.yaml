@@ -1,0 +1,75 @@
+########################################### ################
+device: [0, 1]
+precision: 16
+
+###########################################################
+model:
+  name: 'AANet'
+  
+  stereo:
+    name: 'AANet'
+    min_disparity: 0  # 
+    max_disparity: 192
+
+    # ## AANet
+    # feature_type: 'aanet'
+    # feature_pyramid: False
+    # feature_pyramid_network: True
+    # num_downsample: 2
+    # feature_similarity: 'correlation'
+    # no_feature_mdconv: False
+
+    # aggregation_type: 'adaptive'
+    # num_scales: 3
+    # num_fusions: 6
+    # num_stage_blocks: 1
+    # num_deform_blocks: 3
+    # mdconv_dilation: 2
+    # deformable_groups: 2
+    # no_intermediate_supervision: False
+
+    # refinement_type: 'stereodrnet'
+
+    ## AANet+
+    feature_type: 'ganet'
+    feature_pyramid: True
+    feature_pyramid_network: False
+    num_downsample: 2
+    feature_similarity: 'correlation'
+    no_feature_mdconv: False
+
+    aggregation_type: 'adaptive'
+    num_scales: 3
+    num_fusions: 6
+    num_stage_blocks: 1
+    num_deform_blocks: 3
+    mdconv_dilation: 2
+    deformable_groups: 2
+    no_intermediate_supervision: False
+
+    refinement_type: 'hourglass'
+
+    pretrained_path: 'aanet+_sceneflow-d3e13ef0.pth'
+
+###########################################################
+logging: 
+  path: './logs/stereo'
+
+training:
+  load_path: null  # 'SceneFlow/version_1/checkpoints/last.ckpt'
+  save_version: 1
+
+  lr: 0.001
+  max_epochs: 10
+  milestones: [7]
+  gamma: 0.1
+  batch_size: 8
+  num_workers: 16
+  swa: True
+  training_scales_weighting: [0.33, 0.67, 1.0, 1.0, 1.0]
+
+testing:
+  save_disp_imgs: True
+  save_disp_mode: 'plasma'  # 'kitti'/'jet'/'plasma'
+  compute_metrics: True
+  gt_available: True

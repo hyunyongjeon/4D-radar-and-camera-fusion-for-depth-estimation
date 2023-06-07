@@ -1,0 +1,46 @@
+name: 'CRE'
+
+path: '../data/datasets/CRE'
+subset: 'training'  # 'kitti/kitti2012/kitti2015'_'train'/'test'
+val_split: True
+train_aug:
+
+  th: 320
+  tw: 608
+
+  horizontal_flip: True
+  rectification: True
+  RandomShiftRotate: True
+  RGBShiftStereo: True
+  GaussNoiseStereo: True
+  RandomBrightnessContrastStereo: True
+
+  # Color aug following "Learning stereo from single images. Watson et al. ECCV2020"
+  aug_color: True
+  aug_color_brightness: 0.2
+  aug_color_contrast: 0.2
+  aug_color_saturation: 0.2
+  aug_color_hue: 0.01
+
+  aug_stretch: False
+
+  aug_zoom: False
+  aug_zoom_presets: null
+  aug_zoom_use_sr: False
+  aug_zoom_model_path: 'logs/sr/Real-ESRGAN/RealESRGAN_x2plus.pth'
+  aug_zoom_half_precision: True
+  aug_zoom_min_zoom_ratio: 0.6
+  aug_zoom_max_zoom_ratio: 1.4
+
+  aug_baseline: False
+  aug_baseline_presets: null
+  aug_baseline_min_baseline_ratio: 0.6
+  aug_baseline_max_baseline_ratio: 1.4
+
+  aug_baseline_generated: False
+  aug_baseline_generated_nn: False
+
+  aug_occlusion: True
+
+  syn_cfg_path: 'cfg_instereo2k.yaml'
+  syn_model_path: 'InStereo2K/version_1/checkpoints/last.ckpt'

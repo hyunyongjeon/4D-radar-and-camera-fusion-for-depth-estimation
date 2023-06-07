@@ -1,0 +1,58 @@
+########################################### ################
+device: [0, 1]
+precision: 16
+
+###########################################################
+model:
+  name: 'CoEx'
+  
+  stereo:
+    name: 'CoEx'
+    min_disparity: 0  # 
+    max_disparity: &d 192
+    backbone: 
+      type: 'mobilenetv2_100'
+      from_scratch: False
+      cfg_path: './configs/backbone.yaml'
+
+    corr_volume: True
+    gce: True
+
+    matching_head: 1
+    matching_weighted: False
+
+    spixel: 
+      branch_channels: [32,48]
+
+    aggregation:
+      disp_strides: 2
+      channels: [16,32,48]
+      blocks_num: [2,2,2]
+
+    regression:
+      top_k: 2
+
+###########################################################
+logging: 
+  path: './logs/stereo'
+
+training:
+  load_path: null  # 'SceneFlow/version_1/checkpoints/last.ckpt'
+  save_version: 1
+
+  thresh_disp: True
+
+  lr: 0.001
+  max_epochs: 15
+  milestones: []
+  gamma: 0.1
+  batch_size: 2
+  num_workers: 4
+  swa: True
+  training_scales_weighting: [1, 0.3]
+
+testing:
+  save_disp_imgs: True
+  save_disp_mode: 'magma'  # 'kitti'/'jet'/'magma'
+  compute_metrics: True
+  gt_available: True
