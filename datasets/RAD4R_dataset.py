@@ -55,12 +55,54 @@ class KITTIDataset(MonoDataset):
         return color
     
 
+class MonoRadarDataset(KITTIDataset):    
+# class MonoRadarDataset(MonoDataset):
+    def __init__(self,*args,**kwargs):
+        super(MonoRadarDataset, self).__init__(*args,**kwargs)   
+        
+    def preprocess(self, radar_points):
+        radar_info = {}
+        
+        radar_info['x'] = radar_points[:,0]
+        radar_info['y'] = radar_points[:,1]
+        radar_info['z'] = radar_points[:,2]
+        radar_info['s_0000'] = radar_points[:,3]
+        radar_info['s_0001'] = radar_points[:,4]
+        radar_info['s_0002'] = radar_points[:,5]
+        radar_info['s_0003'] = radar_points[:,6]
+        radar_info['alpha'] = radar_points[:,7]
+        radar_info['beta'] = radar_points[:,8]
+        radar_info['range'] = radar_points[:,9]
+        radar_info['doppler'] = radar_points[:,10]
+        radar_info['power'] = radar_points[:,11]
+        radar_info['recoveredSpeed'] = radar_points[:,12]
+        radar_info['dotFlages'] = radar_points[:,13]
+        radar_info['denoiseFlag'] = radar_points[:,14]
+        radar_info['historyFrmaeFlag'] = radar_points[:,15]
+        radar_info['dopplerCorrectionFlag'] = radar_points[:,16]
+        
+        return radar_info
 
-class R4DARRAWDataset(KITTIDataset):
+    def __getitem__(self,index):
+        folder = self.radar_filenames[index].split()[0]
+        radar_path = os.path.join(self.data_path, folder,"{:010d}.bin".format(int(index)))
+        radar_points = np.fromfile(radar_path, dtype=np.float32).reshape(-1, 17)
+        
+        # x,y,z,alpha,beta,range,doppler,power,recoveredSpeed = self.preprocess(radar_points)
+        radar_info = self.preprocess(radar_points)
+        
+        # import pdb; pdb.set_trace()
+        radar_features = {}
+        radar_features['radar_point'] = radar_info
+        
+        return radar_features
+        
+    
+class RAD4RRAWDataset(MonoRadarDataset):
     """KITTI dataset which loads the original velodyne depth maps for ground truth
     """
     def __init__(self, *args, **kwargs):
-        super(R4DARRAWDataset, self).__init__(*args, **kwargs)
+        super(RAD4RRAWDataset, self).__init__(*args, **kwargs)
 
     # def get_image_path(self, folder, frame_index, side):
     def get_image_path(self, folder, frame_index, side):        
@@ -69,25 +111,3 @@ class R4DARRAWDataset(KITTIDataset):
             # self.data_path, folder, "image_0{}/data".format(self.side_map[side]), f_str)
             self.data_path, folder, f_str)
         return image_path
-
-    # def get_depth(self, folder, frame_index, side, do_flip):
-    def get_radar_path(self, folder, frame_index):        
-        # calib_path = os.path.join(self.data_path, folder.split("/")[0])
-
-        # velo_filename = os.path.join(
-        #     self.data_path,
-        #     folder,
-        #     "velodyne_points/data/{:010d}.bin".format(int(frame_index)))
-        radar_path = os.path.join(
-            self.data_path, folder,
-            "{:010d}.bin".format(int(frame_index)))
-
-        # depth_gt = generate_depth_map(calib_path, velo_filename, self.side_map[side])
-        # depth_gt = skimage.transform.resize(
-        #     depth_gt, self.full_res_shape[::-1], order=0, preserve_range=True, mode='constant')
-
-        # if do_flip:
-        #     depth_gt = np.fliplr(depth_gt)
-
-        # return depth_gt
-        return radar_path    

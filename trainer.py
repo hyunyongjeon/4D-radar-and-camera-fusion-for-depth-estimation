@@ -113,29 +113,46 @@ class Trainer:
         # data
         datasets_dict = {"kitti": datasets.KITTIRAWDataset,
                          "kitti_odom": datasets.KITTIOdomDataset,
-                         "R4DAR": datasets.R4DARRAWDataset}
+                         "RAD4R": datasets.RAD4RRAWDataset}
+        
 
         self.dataset = datasets_dict[self.opt.dataset]
 
-        fpath = os.path.join(os.path.dirname(__file__), "splits", self.opt.split, "{}_files.txt")
+        fpath = os.path.join(os.path.dirname(__file__), \
+            "splits", self.opt.split, "{}_files.txt")
+        radar_fpath = os.path.join(os.path.dirname(__file__), \
+            "splits", self.opt.split, "radar_{}_files.txt")
 
         train_filenames = readlines(fpath.format("train"))
+        radar_train_filenames = readlines(radar_fpath.format("train"))
         val_filenames = readlines(fpath.format("val"))
+        radar_val_filenames = readlines(radar_fpath.format("val"))
         img_ext = '.png' if self.opt.png else '.jpg'
 
         num_train_samples = len(train_filenames)
-        self.num_total_steps = num_train_samples // self.opt.batch_size * self.opt.num_epochs
-        
-        
+        radar_num_train_samples = len(radar_train_filenames)
+        try :
+            num_train_samples == radar_num_train_samples
+            self.num_total_steps = num_train_samples // self.opt.batch_size * self.opt.num_epochs
+        except :
+            print("num_train_samples != radar_num_train_samples")
+            exit()
+
+        # train_dataset = self.dataset(
+        #     self.opt.data_path, train_filenames, self.opt.height, self.opt.width,
+        #     self.opt.frame_ids, 4, is_train=True, img_ext=img_ext)
         train_dataset = self.dataset(
-            self.opt.data_path, train_filenames, self.opt.height, self.opt.width,
+            self.opt.data_path, train_filenames, radar_train_filenames, self.opt.height, self.opt.width,
             self.opt.frame_ids, 4, is_train=True, img_ext=img_ext)
         self.train_loader = DataLoader(
             train_dataset, self.opt.batch_size, True,
             num_workers=self.opt.num_workers, pin_memory=True, drop_last=True)
+        # val_dataset = self.dataset(
+        #     self.opt.data_path, val_filenames, self.opt.height, self.opt.width,
+        #     self.opt.frame_ids, 4, is_train=False, img_ext=img_ext)
         val_dataset = self.dataset(
-            self.opt.data_path, val_filenames, self.opt.height, self.opt.width,
-            self.opt.frame_ids, 4, is_train=False, img_ext=img_ext)
+            self.opt.data_path, val_filenames, radar_val_filenames, self.opt.height, self.opt.width,
+            self.opt.frame_ids, 4, is_train=False, img_ext=img_ext)        
         self.val_loader = DataLoader(
             val_dataset, self.opt.batch_size, True,
             num_workers=self.opt.num_workers, pin_memory=True, drop_last=True)
@@ -202,7 +219,7 @@ class Trainer:
         self.set_train()
 
         for batch_idx, inputs in enumerate(self.train_loader):
-
+            import pdb; pdb.set_trace()
             before_op_time = time.time()
 
             outputs, losses = self.process_batch(inputs)

@@ -38,9 +38,19 @@ class MonoDataset(data.Dataset):
         is_train
         img_ext
     """
+    # def __init__(self,
+    #              data_path,
+    #              filenames,
+    #              height,
+    #              width,
+    #              frame_idxs,
+    #              num_scales,
+    #              is_train=False,
+    #              img_ext='.jpg'):
     def __init__(self,
                  data_path,
                  filenames,
+                 radar_filenames,
                  height,
                  width,
                  frame_idxs,
@@ -48,9 +58,9 @@ class MonoDataset(data.Dataset):
                  is_train=False,
                  img_ext='.jpg'):
         super(MonoDataset, self).__init__()
-        
         self.data_path = data_path
         self.filenames = filenames
+        self.radar_filenames = radar_filenames
         self.height = height
         self.width = width
         self.num_scales = num_scales
@@ -137,7 +147,7 @@ class MonoDataset(data.Dataset):
             3       images resized to (self.width // 8, self.height // 8)
         """
         inputs = {}
-
+        
         do_color_aug = self.is_train and random.random() > 0.5
         do_flip = self.is_train and random.random() > 0.5
 
@@ -199,7 +209,7 @@ class MonoDataset(data.Dataset):
             stereo_T[0, 3] = side_sign * baseline_sign * 0.1
 
             inputs["stereo_T"] = torch.from_numpy(stereo_T)
-
+            
         return inputs
 
     def get_color(self, folder, frame_index, side, do_flip):
