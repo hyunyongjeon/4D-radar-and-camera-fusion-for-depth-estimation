@@ -1,0 +1,1 @@
+$ python train.py --model_name M_640x192_230413 --num_workers 12 --batch_size 12 --log_frequency 10

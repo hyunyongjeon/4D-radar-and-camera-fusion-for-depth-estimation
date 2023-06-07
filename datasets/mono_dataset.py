@@ -48,7 +48,7 @@ class MonoDataset(data.Dataset):
                  is_train=False,
                  img_ext='.jpg'):
         super(MonoDataset, self).__init__()
-
+        
         self.data_path = data_path
         self.filenames = filenames
         self.height = height
@@ -107,6 +107,7 @@ class MonoDataset(data.Dataset):
                 n, im, i = k
                 inputs[(n, im, i)] = self.to_tensor(f)
                 inputs[(n + "_aug", im, i)] = self.to_tensor(color_aug(f))
+
 
     def __len__(self):
         return len(self.filenames)
@@ -173,8 +174,10 @@ class MonoDataset(data.Dataset):
             inputs[("inv_K", scale)] = torch.from_numpy(inv_K)
 
         if do_color_aug:
-            color_aug = transforms.ColorJitter.get_params(
-                self.brightness, self.contrast, self.saturation, self.hue)
+            # color_aug = transforms.ColorJitter.get_params(
+            #     self.brightness, self.contrast, self.saturation, self.hue)
+            color_aug = transforms.ColorJitter(
+                self.brightness, self.contrast, self.saturation, self.hue)            
         else:
             color_aug = (lambda x: x)
 
