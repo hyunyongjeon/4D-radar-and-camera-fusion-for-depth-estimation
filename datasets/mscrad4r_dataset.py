@@ -25,7 +25,8 @@ def pil_loader(path):
             return img.convert('RGB')
 
 
-class MonoDataset(data.Dataset):
+# class MonoDataset(data.Dataset):
+class mscrad4r(data.Dataset):    
     """Superclass for monocular dataloaders
 
     Args:
@@ -41,15 +42,19 @@ class MonoDataset(data.Dataset):
     def __init__(self,
                  data_path,
                  filenames,
+                 radar_filenames,
                  height,
                  width,
                  frame_idxs,
                  num_scales,
                  is_train=False,
                  img_ext='.jpg'):
-        super(MonoDataset, self).__init__()
+        # super(MonoDataset, self).__init__()
+        super(mscrad4r, self).__init__()
+        
         self.data_path = data_path
         self.filenames = filenames
+        self.radar_filenames = radar_filenames
         self.height = height
         self.width = width
         self.num_scales = num_scales
@@ -106,6 +111,56 @@ class MonoDataset(data.Dataset):
                 n, im, i = k
                 inputs[(n, im, i)] = self.to_tensor(f)
                 inputs[(n + "_aug", im, i)] = self.to_tensor(color_aug(f))
+                
+    def radar_preprocess(self, radar_points):
+        """
+        Transform the numpy array to dictionary type to add the key name.
+
+        Args:
+            radar_points(numpy array):
+        
+        Returns:
+            1. radar_x                       for x coordinate
+            2. radar_y                       for y coordinate
+            3. radar_z                       for z coordinate
+            4. adar_s_0000                   not used
+            5. adar_s_0001                   not used
+            6. adar_s_0002                   not used
+            7. adar_s_0003                   not used
+            8. radar_alpha                   for azimuzh angle
+            9. radar_beta                    for elevation angle
+            10. radar_range                  for the distance(m)
+            11. radar_doppler                for the relative velocity(m/s)
+                                             The static object can be easily classified through this value.
+            12. radar_power                  for the signal-to-ratio value of the transmitted power(dB)
+            13. radar_recoveredSpeed         for the absolute velocity in the radial direction of target object(m/s)
+            14. radar_dotFlages              not used  
+            15. radar_denoiseFlag            not used
+                                             as uint16 data types
+                                             The static object can be easily classified through this flag,
+                                             but, to classify static object, we can use doppler value instead.[MSC-RAD4R]
+            16. radar_historyFrmaeFlag       not used 
+            17. radar_dopplerCorrectionFlag  not used
+        """
+        radar_x = torch.from_numpy(radar_points[:,0])
+        radar_y = torch.from_numpy(radar_points[:,1])
+        radar_z = torch.from_numpy(radar_points[:,2])
+        # radar_s_0000 = torch.from_numpy(radar_points[:,3])
+        # radar_s_0001 = torch.from_numpy(radar_points[:,4])
+        # radar_s_0002 = torch.from_numpy(radar_points[:,5])
+        # radar_s_0003 = torch.from_numpy(radar_points[:,6])
+        radar_alpha = torch.from_numpy(radar_points[:,7])
+        radar_beta = torch.from_numpy(radar_points[:,8])
+        radar_range = torch.from_numpy(radar_points[:,9])
+        radar_doppler = torch.from_numpy(radar_points[:,10])
+        radar_power = torch.from_numpy(radar_points[:,11])
+        radar_recoveredSpeed = torch.from_numpy(radar_points[:,12])
+        # radar_dotFlages = torch.from_numpy(radar_points[:,13])
+        # radar_denoiseFlag = torch.from_numpy(radar_points[:,14])
+        # radar_historyFrmaeFlag = torch.from_numpy(radar_points[:,15])
+        # radar_dopplerCorrectionFlag = torch.from_numpy(radar_points[:,16])
+        
+        return radar_x, radar_y, radar_z, radar_alpha, radar_beta, radar_range, radar_doppler, radar_power, radar_recoveredSpeed
 
     def __len__(self):
         return len(self.filenames)
@@ -197,7 +252,30 @@ class MonoDataset(data.Dataset):
             stereo_T[0, 3] = side_sign * baseline_sign * 0.1
 
             inputs["stereo_T"] = torch.from_numpy(stereo_T)
+            
+        """
+        Adding radar point-cloud information to the 'inputs' variable.
+        """
+        folder = self.radar_filenames[index].split()[0]
+        radar_path = os.path.join(self.data_path, folder,"{:010d}.bin".format(int(index)))
+        radar_points = np.fromfile(radar_path, dtype=np.float32).reshape(-1, 17)
 
+        radar_x, radar_y, radar_z, radar_alpha, radar_beta, radar_range, \
+            radar_doppler, radar_power, radar_recoveredSpeed = self.radar_preprocess(radar_points)
+        
+        # radar_features = []
+        # radar_features.append(radar_info)
+        
+        inputs[("radar_x")] = radar_x
+        inputs[("radar_y")] = radar_y
+        inputs[("radar_z")] = radar_z
+        inputs[("radar_alpha")] = radar_alpha
+        inputs[("radar_beta")] = radar_beta
+        inputs[("radar_range")] = radar_range
+        inputs[("radar_doppler")] = radar_doppler
+        inputs[("radar_power")] = radar_power
+        inputs[("radar_recoveredSpeed")] = radar_recoveredSpeed
+                
         return inputs
 
     def get_color(self, folder, frame_index, side, do_flip):
@@ -208,8 +286,3 @@ class MonoDataset(data.Dataset):
 
     def get_depth(self, folder, frame_index, side, do_flip):
         raise NotImplementedError
-
-
-# if __name__=="__main__":
-#     MD = MonoDataset()
-#     import pdb;pdb.set_trace()

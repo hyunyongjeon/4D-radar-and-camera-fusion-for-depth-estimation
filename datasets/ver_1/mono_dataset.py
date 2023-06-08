@@ -38,9 +38,19 @@ class MonoDataset(data.Dataset):
         is_train
         img_ext
     """
+    # def __init__(self,
+    #              data_path,
+    #              filenames,
+    #              height,
+    #              width,
+    #              frame_idxs,
+    #              num_scales,
+    #              is_train=False,
+    #              img_ext='.jpg'):
     def __init__(self,
                  data_path,
                  filenames,
+                 radar_filenames,
                  height,
                  width,
                  frame_idxs,
@@ -50,6 +60,7 @@ class MonoDataset(data.Dataset):
         super(MonoDataset, self).__init__()
         self.data_path = data_path
         self.filenames = filenames
+        self.radar_filenames = radar_filenames
         self.height = height
         self.width = width
         self.num_scales = num_scales
@@ -107,6 +118,7 @@ class MonoDataset(data.Dataset):
                 inputs[(n, im, i)] = self.to_tensor(f)
                 inputs[(n + "_aug", im, i)] = self.to_tensor(color_aug(f))
 
+
     def __len__(self):
         return len(self.filenames)
 
@@ -135,7 +147,7 @@ class MonoDataset(data.Dataset):
             3       images resized to (self.width // 8, self.height // 8)
         """
         inputs = {}
-
+        
         do_color_aug = self.is_train and random.random() > 0.5
         do_flip = self.is_train and random.random() > 0.5
 
@@ -175,10 +187,10 @@ class MonoDataset(data.Dataset):
             # color_aug = transforms.ColorJitter.get_params(
             #     self.brightness, self.contrast, self.saturation, self.hue)
             color_aug = transforms.ColorJitter(
-                self.brightness, self.contrast, self.saturation, self.hue)
+                self.brightness, self.contrast, self.saturation, self.hue)            
         else:
             color_aug = (lambda x: x)
-            
+
         self.preprocess(inputs, color_aug)
 
         for i in self.frame_idxs:
@@ -197,7 +209,7 @@ class MonoDataset(data.Dataset):
             stereo_T[0, 3] = side_sign * baseline_sign * 0.1
 
             inputs["stereo_T"] = torch.from_numpy(stereo_T)
-
+            
         return inputs
 
     def get_color(self, folder, frame_index, side, do_flip):
@@ -208,8 +220,3 @@ class MonoDataset(data.Dataset):
 
     def get_depth(self, folder, frame_index, side, do_flip):
         raise NotImplementedError
-
-
-# if __name__=="__main__":
-#     MD = MonoDataset()
-#     import pdb;pdb.set_trace()

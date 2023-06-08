@@ -84,16 +84,44 @@ class MonoRadarDataset(KITTIDataset):
         return radar_info
 
     def __getitem__(self,index):
+        
+        """
+        Returns a single training item from the dataset as a list.
+        The list is a batched according to batch size. 
+        Each list has a radar_info as a dictionary.
+
+        radar_info has various keys:
+
+        x                       for x coordinate
+        y                       for y coordinate
+        z                       for z coordinate
+        alpha                   for azimuzh angle
+        beta                    for elevation angle
+        range                   for the distance(m)
+        doppler                 for the relative velocity(m/s)
+                                The static object can be easily classified through this value.
+        power                   for the signal-to-ratio value of the transmitted power(dB)
+        recoveredSpeed          for the absolute velocity in the radial direction of target object(m/s)
+        dotFlages               
+        denoiseFlag             as uint16 data types
+                                The static object can be easily classified through this flag,
+                                but, to classify static object, we can use doppler value instead.
+                                [MSC-RAD4R]
+        historyFrmaeFlag
+        dopplerCorrectionFlag
+
+        """
         folder = self.radar_filenames[index].split()[0]
         radar_path = os.path.join(self.data_path, folder,"{:010d}.bin".format(int(index)))
         radar_points = np.fromfile(radar_path, dtype=np.float32).reshape(-1, 17)
-        
+
         # x,y,z,alpha,beta,range,doppler,power,recoveredSpeed = self.preprocess(radar_points)
         radar_info = self.preprocess(radar_points)
         
-        # import pdb; pdb.set_trace()
-        radar_features = {}
-        radar_features['radar_point'] = radar_info
+        radar_features = []
+        radar_features.append(radar_info)
+        
+        # super(MonoRadarDataset,self).__getitem__(index)
         
         return radar_features
         
@@ -111,3 +139,4 @@ class RAD4RRAWDataset(MonoRadarDataset):
             # self.data_path, folder, "image_0{}/data".format(self.side_map[side]), f_str)
             self.data_path, folder, f_str)
         return image_path
+

@@ -12,12 +12,10 @@ import numpy as np
 import PIL.Image as pil
 
 from kitti_utils import generate_depth_map
-# from .mono_dataset import MonoDataset
-from .mscrad4r_dataset import mscrad4r
+from .mono_dataset import MonoDataset
 
 
-# class KITTIDataset(MonoDataset):
-class KITTIDataset(mscrad4r):    
+class KITTIDataset(MonoDataset):
     """Superclass for different types of KITTI dataset loaders
     """
     def __init__(self, *args, **kwargs):
@@ -35,7 +33,7 @@ class KITTIDataset(mscrad4r):
 
         self.full_res_shape = (1242, 375)
         self.side_map = {"2": 2, "3": 3, "l": 2, "r": 3}
-        
+
     def check_depth(self):
         line = self.filenames[0].split()
         scene_name = line[0]
@@ -55,20 +53,19 @@ class KITTIDataset(mscrad4r):
             color = color.transpose(pil.FLIP_LEFT_RIGHT)
 
         return color
+    
 
 
 class KITTIRAWDataset(KITTIDataset):
     """KITTI dataset which loads the original velodyne depth maps for ground truth
     """
-    
     def __init__(self, *args, **kwargs):
         super(KITTIRAWDataset, self).__init__(*args, **kwargs)
 
     def get_image_path(self, folder, frame_index, side):
         f_str = "{:010d}{}".format(frame_index, self.img_ext)
         image_path = os.path.join(
-            # self.data_path, folder, "image_0{}/data".format(self.side_map[side]), f_str)
-            self.data_path, folder, f_str)
+            self.data_path, folder, "image_0{}/data".format(self.side_map[side]), f_str)
         return image_path
 
     def get_depth(self, folder, frame_index, side, do_flip):

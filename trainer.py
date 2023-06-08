@@ -111,10 +111,11 @@ class Trainer:
         print("Training is using:\n  ", self.device)
 
         # data
+        # datasets_dict = {"kitti": datasets.KITTIRAWDataset,
+        #                  "kitti_odom": datasets.KITTIOdomDataset,
+        #                  "RAD4R": datasets.mscrad4r_dataset}
         datasets_dict = {"kitti": datasets.KITTIRAWDataset,
-                         "kitti_odom": datasets.KITTIOdomDataset,
-                         "RAD4R": datasets.RAD4RRAWDataset}
-        
+                         "kitti_odom": datasets.KITTIOdomDataset}
 
         self.dataset = datasets_dict[self.opt.dataset]
 
@@ -128,7 +129,7 @@ class Trainer:
         val_filenames = readlines(fpath.format("val"))
         radar_val_filenames = readlines(radar_fpath.format("val"))
         img_ext = '.png' if self.opt.png else '.jpg'
-
+        
         num_train_samples = len(train_filenames)
         radar_num_train_samples = len(radar_train_filenames)
         try :
@@ -144,9 +145,11 @@ class Trainer:
         train_dataset = self.dataset(
             self.opt.data_path, train_filenames, radar_train_filenames, self.opt.height, self.opt.width,
             self.opt.frame_ids, 4, is_train=True, img_ext=img_ext)
+        def collate_fn(batch):
+            return tuple(zip(*batch))
         self.train_loader = DataLoader(
             train_dataset, self.opt.batch_size, True,
-            num_workers=self.opt.num_workers, pin_memory=True, drop_last=True)
+            num_workers=self.opt.num_workers, pin_memory=True, drop_last=True, collate_fn=collate_fn)
         # val_dataset = self.dataset(
         #     self.opt.data_path, val_filenames, self.opt.height, self.opt.width,
         #     self.opt.frame_ids, 4, is_train=False, img_ext=img_ext)
