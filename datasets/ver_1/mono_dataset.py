@@ -210,6 +210,11 @@ class MonoDataset(data.Dataset):
 
             inputs["stereo_T"] = torch.from_numpy(stereo_T)
             
+        radar_features = self.__radar_getitem__(index)
+        inputs.update({
+            'radar_features': radar_features
+            })
+
         return inputs
 
     def get_color(self, folder, frame_index, side, do_flip):

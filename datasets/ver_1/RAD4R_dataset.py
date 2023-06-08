@@ -83,7 +83,7 @@ class MonoRadarDataset(KITTIDataset):
         
         return radar_info
 
-    def __getitem__(self,index):
+    def __radar_getitem__(self,index):
         
         """
         Returns a single training item from the dataset as a list.
