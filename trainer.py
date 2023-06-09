@@ -146,7 +146,6 @@ class Trainer:
             self.opt.data_path, train_filenames, radar_train_filenames, self.opt.height, self.opt.width,
             self.opt.frame_ids, 4, is_train=True, img_ext=img_ext)
         def collate_fn(batch):
-            # import pdb; pdb.set_trace()
             # if key is radar then simply use list
             # if key is image then use torch.stack
             out_batch = dict()
@@ -155,7 +154,6 @@ class Trainer:
                     out_batch[key] = [sample[key] for sample in batch]
                 else:
                     out_batch[key] = torch.stack([sample[key] for sample in batch], 0)
-            # return tuple(zip(*batch))
             return out_batch
         self.train_loader = DataLoader(
             train_dataset, self.opt.batch_size, True,
