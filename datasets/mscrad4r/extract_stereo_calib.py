@@ -1,8 +1,3 @@
-# read stereo camera pickle files
-# extract synced stereo images and save them as png files
-# then use the images to calibrate stereo camera using opencv
-# save calibration results as pickle files for later use
-# perform stereo rectification to validate the calibration results
 # python -m datasets.mscrad4r.extract_stereo_calib 
 
 import pickle
@@ -10,6 +5,7 @@ import numpy as np
 import cv2
 import glob
 import argparse
+import os
 from pathlib import Path
 
 import pdb
@@ -22,9 +18,9 @@ class Stereo:
 
     def read(self):
         # read stereo camera pickle files
-        with open(self.data_path + 'cam_left.pkl', 'rb') as f:
+        with open(os.path.join(self.data_path, 'cam_left.pkl'), 'rb') as f:
             cam_left_msgs = pickle.load(f)
-        with open(self.data_path + 'cam_right.pkl', 'rb') as f:
+        with open(os.path.join(self.data_path, 'cam_right.pkl'), 'rb') as f:
             cam_right_msgs = pickle.load(f)
 
         # extract synced stereo images and save them as png files
@@ -33,21 +29,21 @@ class Stereo:
             timegap = np.abs(cam_left_msgs['time'][i] - cam_right_msgs['time'][i]) / 1e9
             
             if timegap < 0.001: #
-                cv2.imwrite(self.save_path + 'cam_left_' + str(i) + '.png', cam_left_msgs['msg'][i])
-                cv2.imwrite(self.save_path + 'cam_right_' + str(i) + '.png', cam_right_msgs['msg'][i])
+                cv2.imwrite(os.path.join(self.save_path, 'cam_left_' + str(i) + '.png'), cam_left_msgs['msg'][i])
+                cv2.imwrite(os.path.join(self.save_path, 'cam_right_' + str(i) + '.png'), cam_right_msgs['msg'][i])
     
     def calib(self):
         print('calibrating stereo camera...')
         # read stereo images
-        img_left_paths = glob.glob(self.save_path + 'cam_left_*.png')
-        img_right_paths = glob.glob(self.save_path + 'cam_right_*.png')
+        img_left_paths = glob.glob(os.path.join(self.save_path, 'cam_left_*.png'))
+        img_right_paths = glob.glob(os.path.join(self.save_path, 'cam_right_*.png'))
         img_left_paths.sort()
         img_right_paths.sort()
 
         criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
         print(" find corners in chessboard images...")
-        chessboard_save_path = Path(self.save_path + 'chessboard/')
+        chessboard_save_path = Path(os.path.join(self.save_path, 'chessboard/'))
         chessboard_save_path.mkdir(parents=True, exist_ok=True)
         for i, img_left_path in enumerate(img_left_paths):
             img_left = cv2.imread(img_left_path)
@@ -108,7 +104,7 @@ class Stereo:
 
         # save calibration results as pickle files for later use
         stereo_calib = {'mtx_left': mtx_left, 'dist_left': dist_left, 'mtx_right': mtx_right, 'dist_right': dist_right, 'R': R, 'T': T, 'E': E, 'F': F}
-        with open(self.save_path + 'stereo_calib.pkl', 'wb') as f:
+        with open(os.path.join(self.save_path, 'stereo_calib.pkl'), 'wb') as f:
             pickle.dump(stereo_calib, f)
         print(' stereo calibration results saved as pickle files')
 
@@ -117,13 +113,13 @@ class Stereo:
         rectify_save_path = Path(self.save_path + 'rectified/')
         rectify_save_path.mkdir(parents=True, exist_ok=True)
         # read stereo images
-        img_left_paths = glob.glob(self.save_path + 'cam_left_*.png')
-        img_right_paths = glob.glob(self.save_path + 'cam_right_*.png')
+        img_left_paths = glob.glob(os.path.join(self.save_path, 'cam_left_*.png'))
+        img_right_paths = glob.glob(os.path.join(self.save_path, 'cam_right_*.png'))
         img_left_paths.sort()
         img_right_paths.sort()
 
         # read stereo calibration results
-        with open(self.save_path + 'stereo_calib.pkl', 'rb') as f:
+        with open(os.path.join(self.save_path, 'stereo_calib.pkl'), 'rb') as f:
             stereo_calib = pickle.load(f)
         mtx_left = stereo_calib['mtx_left']
         dist_left = stereo_calib['dist_left']
@@ -164,8 +160,8 @@ args = parser.parse_args()
 
 
 if __name__ == '__main__':
-    data_path = args.data_dir + args.data_name + '/'
-    save_path = args.save_dir + args.data_name + '/'
+    data_path = os.path.join(args.data_dir, args.data_name)
+    save_path = os.path.join(args.save_dir, args.data_name)
     stereo = Stereo(data_path, save_path)
     # stereo.read()
     # stereo.calib()

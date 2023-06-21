@@ -1,5 +1,6 @@
 
 import numpy as np
+from tqdm import tqdm
 from sklearn.neighbors import NearestNeighbors
 
 import pdb
@@ -132,3 +133,79 @@ def icp(A, B, init_pose=None, match_all=False, dist_thresh=1.0,
     # src = np.dot(T, src)
 
     return T, src[:m,:].T, len(match_id)
+
+def multi_icp(As, Bs, init_pose=None, match_all=False, dist_thresh=1.0,
+        max_iterations=200, tolerance=0.0001):
+    '''
+    The Iterative Closest Point method: finds best-fit transform that maps points A on to points B
+    Input:
+        As: list of Nxm numpy array of source mD points
+        Bs: list of Nxm numpy array of destination mD point
+        init_pose: (m+1)x(m+1) homogeneous transformation
+        max_iterations: exit algorithm after max_iterations
+        tolerance: convergence criteria
+    Output:
+        Ts: list of final homogeneous transformation that maps A on to B
+        distances: Euclidean distances (errors) of the nearest neighbor
+        i: number of iterations to converge
+    '''
+
+    srcs, dsts = [], []
+    for i, (A, B) in enumerate(zip(As, Bs)):
+        # get number of dimensions
+        m = A.shape[1]
+
+        # make points homogeneous, copy them to maintain the originals
+        src = np.ones((m+1,A.shape[0]))
+        dst = np.ones((m+1,B.shape[0]))
+        src[:m,:] = np.copy(A.T)
+        dst[:m,:] = np.copy(B.T)
+
+        # apply the initial pose estimation
+        if init_pose is not None:
+            src = np.dot(init_pose, src)
+
+        srcs.append(src)
+        dsts.append(dst)
+
+    prev_error = 0
+
+    # use tqdm to show progress bar
+    for _ in tqdm(range(max_iterations)):
+        src_matches, dst_matches = [], []
+        dists = []
+        for j, (src, dst) in enumerate(zip(srcs, dsts)):
+            # find the nearest neighbors between the current source and destination points
+            distances, indices = nearest_neighbor(src[:m,:].T, dst[:m,:].T)
+
+            # compute the transformation between the current source and nearest destination points
+            src_match = src[:m, :].T
+            dst_match = dst[:m, indices].T
+            # select matches with distances below threshold
+            if not match_all:
+                match_id = np.where(distances < dist_thresh)[0]
+                src_match = src_match[match_id]
+                dst_match = dst_match[match_id]
+            else:
+                match_id = np.arange(src_match.shape[0])
+                
+            src_matches.append(src_match)
+            dst_matches.append(dst_match)
+            dists.append(distances[match_id])
+
+        src_matches_np = np.concatenate(src_matches, axis=0)
+        dst_matches_np = np.concatenate(dst_matches, axis=0)
+        distances = np.concatenate(dists, axis=0)
+
+        T,_,_ = best_fit_transform(src_matches_np, dst_matches_np)
+
+        # update the current source
+        for j, src in enumerate(srcs):
+            srcs[j] = np.dot(T, src)
+            
+    # calculate final transformation
+    As_np = np.concatenate(As, axis=0)
+    srcs_np = np.concatenate(srcs, axis=1)
+    T,_,_ = best_fit_transform(As_np, srcs_np[:m,:].T)
+
+    return T, srcs_np[:m,:].T, len(match_id)

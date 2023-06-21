@@ -4,6 +4,7 @@
 import pickle
 import numpy as np
 import pandas as pd
+import os
 import struct
 import argparse
 
@@ -88,13 +89,13 @@ class ReadBag:
         lidar_msgs['time'] = np.array(lidar_msgs['time'])
         lidar_msgs['msg'] = np.array(lidar_msgs['msg'])
 
-        with open(self.save_path + 'cam_left.pkl', 'wb') as f:
+        with open(os.path.join(self.save_path, 'cam_left.pkl'), 'wb') as f:
             pickle.dump(cam_left_msgs, f)
-        with open(self.save_path + 'cam_right.pkl', 'wb') as f:
+        with open(os.path.join(self.save_path, 'cam_right.pkl'), 'wb') as f:
             pickle.dump(cam_right_msgs, f)
-        with open(self.save_path + 'radar.pkl', 'wb') as f:
+        with open(os.path.join(self.save_path, 'radar.pkl'), 'wb') as f:
             pickle.dump(radar_msgs, f)
-        with open(self.save_path + 'lidar.pkl', 'wb') as f:
+        with open(os.path.join(self.save_path, 'lidar.pkl'), 'wb') as f:
             pickle.dump(lidar_msgs, f)
 
 
@@ -161,8 +162,8 @@ args = parser.parse_args()
 
 
 if __name__ == '__main__':
-    bag_path = args.data_dir + args.bag_dir + '/' + args.bag_name
-    save_path = args.save_dir + args.bag_name[:-4] + '/'
+    bag_path = os.path.join(args.data_dir, args.bag_dir, args.bag_name)
+    save_path = os.path.join(args.save_dir, args.bag_name[:-4])
 
     topic_names = {
         'cam_left': args.cam_left_topic_name,
