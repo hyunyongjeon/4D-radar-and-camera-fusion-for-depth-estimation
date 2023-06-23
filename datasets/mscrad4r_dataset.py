@@ -11,6 +11,8 @@ import random
 import numpy as np
 import copy
 from PIL import Image  # using pillow-simd for increased speed
+import cv2
+import pickle
 
 import torch
 import torch.utils.data as data
@@ -45,6 +47,51 @@ class mscrad4r(MonoDataset):
         # super(MonoDataset, self).__init__()
         super(mscrad4r, self).__init__(*args, **kwargs)
 
+        self.full_res_shape = (720, 540)
+        
+        stereo_calib_path = './data/mscrad4r_pkl/stereo_calib/230402_cam_calib/stereo_calib.pkl'
+        with open(stereo_calib_path, 'rb') as f:
+            self.stereo_calib = pickle.load(f)
+        
+        mtx_left = self.stereo_calib['mtx_left']
+        dist_left = self.stereo_calib['dist_left']
+        mtx_right = self.stereo_calib['mtx_right']
+        dist_right = self.stereo_calib['dist_right']
+        R = self.stereo_calib['R']
+        T = self.stereo_calib['T']
+        E = self.stereo_calib['E']
+        F = self.stereo_calib['F']
+        # camera matrices ('mtx_left','mtx_right')
+        # distortion coefficients ('dist_left','dist_right')
+        # rotation matrix between the 1st and the 2nd cameras ('R')
+        # translation vector between the coordinate systems of the cameras ('T')
+        # essential matrix ('E')
+        # fundamental matrix ('F')
+
+        # stereo rectification
+        R1, R2, P1, P2, Q, roi_left, roi_right = cv2.stereoRectify(
+            mtx_left, dist_left, mtx_right, dist_right, self.full_res_shape, R, T)
+        # Rectification matrices ('R1','R2')
+        # Projection matrices ('P1','P2')
+        # Disparity-to-depth mapping matrix ('Q')
+        # Region of interest for the rectified images ('roi_left','roi_right')
+        self.map_left1, self.map_left2 = cv2.initUndistortRectifyMap(
+            mtx_left, dist_left, R1, P1, self.full_res_shape, cv2.CV_16SC2)
+        # Generates retification maps ('map_left1','map_left2')
+        
+        K = np.eye(4, dtype=np.float32)
+        K[:3, :3] = P1[:3, :3]
+        K[0, 0] /= self.full_res_shape[0]
+        K[1, 1] /= self.full_res_shape[1]
+        K[0, 2] /= self.full_res_shape[0]
+        K[1, 2] /= self.full_res_shape[1]
+        self.K = K
+        
+    def stereo_rectify(self, img_left):
+        img_left_rectified = cv2.remap(
+            img_left, self.map_left1, self.map_left2, cv2.INTER_LINEAR)
+        return img_left_rectified
+
     def preprocess(self, inputs, color_aug):
         """Resize colour images to the required scales and augment if required
 
@@ -66,7 +113,7 @@ class mscrad4r(MonoDataset):
                 inputs[(n, im, i)] = self.to_tensor(f)
                 inputs[(n + "_aug", im, i)] = self.to_tensor(color_aug(f))
                 
-    def radar_preprocess(self, radar_points):
+    def radar_preprocess(self, inputs, radar_points):
         """
         Transform the numpy array to dictionary type to add the key name.
 
@@ -96,26 +143,24 @@ class mscrad4r(MonoDataset):
             16. radar_historyFrmaeFlag       not used 
             17. radar_dopplerCorrectionFlag  not used
         """
-        radar_x = torch.from_numpy(radar_points[:,0])
-        radar_y = torch.from_numpy(radar_points[:,1])
-        radar_z = torch.from_numpy(radar_points[:,2])
-        # radar_s_0000 = torch.from_numpy(radar_points[:,3])
-        # radar_s_0001 = torch.from_numpy(radar_points[:,4])
-        # radar_s_0002 = torch.from_numpy(radar_points[:,5])
-        # radar_s_0003 = torch.from_numpy(radar_points[:,6])
-        radar_alpha = torch.from_numpy(radar_points[:,7])
-        radar_beta = torch.from_numpy(radar_points[:,8])
-        radar_range = torch.from_numpy(radar_points[:,9])
-        radar_doppler = torch.from_numpy(radar_points[:,10])
-        radar_power = torch.from_numpy(radar_points[:,11])
-        radar_recoveredSpeed = torch.from_numpy(radar_points[:,12])
-        # radar_dotFlages = torch.from_numpy(radar_points[:,13])
-        # radar_denoiseFlag = torch.from_numpy(radar_points[:,14])
-        # radar_historyFrmaeFlag = torch.from_numpy(radar_points[:,15])
-        # radar_dopplerCorrectionFlag = torch.from_numpy(radar_points[:,16])
+        inputs["radar_x"] = torch.from_numpy(radar_points[:,0])
+        inputs["radar_y"] = torch.from_numpy(radar_points[:,1])
+        inputs["radar_z"] = torch.from_numpy(radar_points[:,2])
+        # inputs["radar_s_0000"] = torch.from_numpy(radar_points[:,3])
+        # inputs["radar_s_0001"] = torch.from_numpy(radar_points[:,4])
+        # inputs["radar_s_0002"] = torch.from_numpy(radar_points[:,5])
+        # inputs["radar_s_0003"] = torch.from_numpy(radar_points[:,6])
+        inputs["radar_alpha"] = torch.from_numpy(radar_points[:,7])
+        inputs["radar_beta"] = torch.from_numpy(radar_points[:,8])
+        inputs["radar_range"] = torch.from_numpy(radar_points[:,9])
+        inputs["radar_doppler"] = torch.from_numpy(radar_points[:,10])
+        inputs["radar_power"] = torch.from_numpy(radar_points[:,11])
+        inputs["radar_recoveredSpeed"] = torch.from_numpy(radar_points[:,12])
+        # inputs["radar_dotFlages"] = torch.from_numpy(radar_points[:,13])
+        # inputs["radar_denoiseFlag"] = torch.from_numpy(radar_points[:,14])
+        # inputs["radar_historyFrmaeFlag"] = torch.from_numpy(radar_points[:,15])
+        # inputs["radar_dopplerCorrectionFlag"] = torch.from_numpy(radar_points[:,16])
         
-        return radar_x, radar_y, radar_z, radar_alpha, radar_beta, radar_range, radar_doppler, radar_power, radar_recoveredSpeed
-
     def __len__(self):
         return len(self.filenames)
 
@@ -132,28 +177,13 @@ class mscrad4r(MonoDataset):
         Adding radar point-cloud information to the 'inputs' variable.
         """
         inputs = {}
-        
         folder = self.radar_filenames[index].split()[0]
-        radar_path = os.path.join(self.data_path, folder,"{:010d}.bin".format(int(index)))
+        # the index is out of range of the radar data. How to solve this problem?
+        radar_path = os.path.join(self.data_path, folder,"{:010d}.bin".format(int(self.radar_filenames[index].split()[1])))
         radar_points = np.fromfile(radar_path, dtype=np.float32).reshape(-1, 17)
 
-        radar_x, radar_y, radar_z, radar_alpha, radar_beta, radar_range, \
-            radar_doppler, radar_power, radar_recoveredSpeed = self.radar_preprocess(radar_points)
+        self.radar_preprocess(inputs,radar_points)
         
-        # radar_features = []
-        # radar_features.append(radar_info)
-        
-        inputs[("radar_x")] = radar_x
-        inputs[("radar_y")] = radar_y
-        inputs[("radar_z")] = radar_z
-        inputs[("radar_alpha")] = radar_alpha
-        inputs[("radar_beta")] = radar_beta
-        inputs[("radar_range")] = radar_range
-        inputs[("radar_doppler")] = radar_doppler
-        inputs[("radar_power")] = radar_power
-        inputs[("radar_recoveredSpeed")] = radar_recoveredSpeed
-        
-        # import pdb; pdb.set_trace()
         return inputs
 
     def get_color(self, folder, frame_index, side, do_flip):
@@ -166,10 +196,10 @@ class mscrad4r(MonoDataset):
         raise NotImplementedError
     
     
-class mscrad4r_mono(mscrad4r):
-    def __init__(self, *args, **kwargs):
-        super(mscrad4r_mono, self).__init__(*args, **kwargs)
+# class mscrad4r_mono(mscrad4r):
+#     def __init__(self, *args, **kwargs):
+#         super(mscrad4r_mono, self).__init__(*args, **kwargs)
         
-    def __getitem__(self, index):
-        inputs = self.mono_getitem(index)
-        return inputs
+#     def __getitem__(self, index):
+#         inputs = self.mono_getitem(index)
+#         return inputs

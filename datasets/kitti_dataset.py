@@ -21,6 +21,7 @@ class KITTIDataset(mscrad4r):
     """Superclass for different types of KITTI dataset loaders
     """
     def __init__(self, *args, **kwargs):
+        
         super(KITTIDataset, self).__init__(*args, **kwargs)
 
         # NOTE: Make sure your intrinsics matrix is *normalized* by the original image size.
@@ -28,12 +29,12 @@ class KITTIDataset(mscrad4r):
         # by 1 / image_height. Monodepth2 assumes a principal point to be exactly centered.
         # If your principal point is far from the center you might need to disable the horizontal
         # flip augmentation.
-        self.K = np.array([[0.58, 0, 0.5, 0],
-                           [0, 1.92, 0.5, 0],
-                           [0, 0, 1, 0],
-                           [0, 0, 0, 1]], dtype=np.float32)
+        # self.K = np.array([[0.58, 0, 0.5, 0],
+        #                    [0, 1.92, 0.5, 0],
+        #                    [0, 0, 1, 0],
+        #                    [0, 0, 0, 1]], dtype=np.float32)
 
-        self.full_res_shape = (1242, 375)
+        # self.full_res_shape = (1242, 375)
         self.side_map = {"2": 2, "3": 3, "l": 2, "r": 3}
         
     def check_depth(self):
@@ -49,12 +50,17 @@ class KITTIDataset(mscrad4r):
         return os.path.isfile(velo_filename)
 
     def get_color(self, folder, frame_index, side, do_flip):
+        
         color = self.loader(self.get_image_path(folder, frame_index, side))
+        import pdb; pdb.set_trace()
+        color_np = np.array(color)
+        color_np_rect = self.stereo_rectify(color_np)
+        color_rect = pil.fromarray(color_np_rect)
 
         if do_flip:
-            color = color.transpose(pil.FLIP_LEFT_RIGHT)
+            color_rect = color_rect.transpose(pil.FLIP_LEFT_RIGHT)
 
-        return color
+        return color_rect
 
 
 class KITTIRAWDataset(KITTIDataset):

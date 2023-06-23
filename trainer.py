@@ -25,6 +25,8 @@ import datasets
 import networks
 from IPython import embed
 
+from visualize import depth_vis
+
 
 class Trainer:
     def __init__(self, options):
@@ -109,6 +111,8 @@ class Trainer:
         print("Training model named:\n  ", self.opt.model_name)
         print("Models and tensorboard events files are saved to:\n  ", self.opt.log_dir)
         print("Training is using:\n  ", self.device)
+        
+        # create another teacher model
 
         # data
         # datasets_dict = {"kitti": datasets.KITTIRAWDataset,
@@ -118,12 +122,12 @@ class Trainer:
                          "kitti_odom": datasets.KITTIOdomDataset}
 
         self.dataset = datasets_dict[self.opt.dataset]
-
+        
         fpath = os.path.join(os.path.dirname(__file__), \
             "splits", self.opt.split, "{}_files.txt")
         radar_fpath = os.path.join(os.path.dirname(__file__), \
             "splits", self.opt.split, "radar_{}_files.txt")
-
+        
         train_filenames = readlines(fpath.format("train"))
         radar_train_filenames = readlines(radar_fpath.format("train"))
         val_filenames = readlines(fpath.format("val"))
@@ -139,36 +143,35 @@ class Trainer:
             print("num_train_samples != radar_num_train_samples")
             exit()
 
-        # train_dataset = self.dataset(
-        #     self.opt.data_path, train_filenames, self.opt.height, self.opt.width,
-        #     self.opt.frame_ids, 4, is_train=True, img_ext=img_ext)
-        train_dataset = self.dataset(
-            self.opt.data_path, train_filenames, radar_train_filenames, self.opt.height, self.opt.width,
-            self.opt.frame_ids, 4, is_train=True, img_ext=img_ext)
         def collate_fn(batch):
             # if key is radar then simply use list
             # if key is image then use torch.stack
             out_batch = dict()
             for key in batch[0].keys():
                 if 'radar' in key:
-                    out_batch[key] = [sample[key] for sample in batch]
+                    values = [sample[key] for sample in batch]
+                    max_length = max(tensor.size(0) for tensor in values)
+                    tensor_values = torch.stack([torch.nn.functional.pad(tensor, (0, max_length - tensor.size(0)))\
+                        [:max_length] for tensor in values])
+                    out_batch[key] = tensor_values
                 else:
                     out_batch[key] = torch.stack([sample[key] for sample in batch], 0)
             return out_batch
+        
+        train_dataset = self.dataset(
+            self.opt.data_path, train_filenames, radar_train_filenames, self.opt.height, self.opt.width,
+            self.opt.frame_ids, 4, is_train=True, img_ext=img_ext)
         self.train_loader = DataLoader(
             train_dataset, self.opt.batch_size, True,
             num_workers=self.opt.num_workers, pin_memory=True, drop_last=True, collate_fn=collate_fn)
-        # val_dataset = self.dataset(
-        #     self.opt.data_path, val_filenames, self.opt.height, self.opt.width,
-        #     self.opt.frame_ids, 4, is_train=False, img_ext=img_ext)
         val_dataset = self.dataset(
             self.opt.data_path, val_filenames, radar_val_filenames, self.opt.height, self.opt.width,
             self.opt.frame_ids, 4, is_train=False, img_ext=img_ext)        
         self.val_loader = DataLoader(
             val_dataset, self.opt.batch_size, True,
-            num_workers=self.opt.num_workers, pin_memory=True, drop_last=True)
+            num_workers=self.opt.num_workers, pin_memory=True, drop_last=True, collate_fn=collate_fn)
         self.val_iter = iter(self.val_loader)
-
+        
         self.writers = {}
         for mode in ["train", "val"]:
             self.writers[mode] = SummaryWriter(os.path.join(self.log_path, mode))
@@ -230,10 +233,14 @@ class Trainer:
         self.set_train()
 
         for batch_idx, inputs in enumerate(self.train_loader):
-            import pdb; pdb.set_trace()
             before_op_time = time.time()
 
             outputs, losses = self.process_batch(inputs)
+            
+            import pdb; pdb.set_trace()
+            
+            # # Viualize depth 
+            # depth_vis(outputs[("depth", 0, 0)][0])
 
             self.model_optimizer.zero_grad()
             losses["loss"].backward()
@@ -659,3 +666,4 @@ class Trainer:
             self.model_optimizer.load_state_dict(optimizer_dict)
         else:
             print("Cannot find Adam weights so Adam is randomly initialized")
+

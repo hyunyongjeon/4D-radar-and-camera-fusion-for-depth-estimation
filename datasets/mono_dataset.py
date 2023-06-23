@@ -52,7 +52,7 @@ class MonoDataset(data.Dataset):
                  img_ext='.jpg'):
         super(MonoDataset, self).__init__()
         # super(mscrad4r, self).__init__()
-        
+
         self.data_path = data_path
         self.filenames = filenames
         self.radar_filenames = radar_filenames
@@ -150,7 +150,7 @@ class MonoDataset(data.Dataset):
 
         line = self.filenames[index].split()
         folder = line[0]
-
+        
         if len(line) == 3:
             frame_index = int(line[1])
         else:

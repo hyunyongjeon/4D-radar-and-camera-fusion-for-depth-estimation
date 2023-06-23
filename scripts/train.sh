@@ -1,0 +1,3 @@
+python train.py --model_name test --width 320 --height 256 --num_workers 0 --batch_size 12 --log_frequency 10
+# python train.py --model_name mscrad4r_320x256_230621 --width 320 --height 256 --num_workers 12 --batch_size 12 --log_frequency 250
+# python train.py --model_name M_640x192_230404 --num_workers 12 --batch_size 12 --load_weights_folder /home/jeon/tmp/M_640x192/models/weights_0 --log_frequency 25

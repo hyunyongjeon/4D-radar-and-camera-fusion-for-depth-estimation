@@ -1,1 +1,14 @@
-$ python train.py --model_name M_640x192_230413 --num_workers 12 --batch_size 12 --log_frequency 10
+"""3d point-cloud visualization"""
+# Examples for projection from 2d image into 3d point-cloud using depth information 
+$ python test_simple.py --model_name mono_640x192 --image_path ~/Desktop/monodepth2/RAD4R/230224_RURAL/
+
+
+
+"""tensorboard """
+$ conda activate tb 
+
+$ cd /home/jeon/tmp/mscrad4r_320x256_230621/train/
+
+$ tensorboard --logdir=events.out.tfevents.1687329223.jeon --host=143.248.250.60
+# --logdir : We need to designate the exact file name 
+# --host : If we set this flag, we can monitor another desktop Ex) 143.248.250.60:6006
