@@ -236,9 +236,7 @@ class Trainer:
             before_op_time = time.time()
 
             outputs, losses = self.process_batch(inputs)
-            
-            import pdb; pdb.set_trace()
-            
+
             # # Viualize depth 
             # depth_vis(outputs[("depth", 0, 0)][0])
 

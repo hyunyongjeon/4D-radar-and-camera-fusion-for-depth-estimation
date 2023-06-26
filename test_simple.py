@@ -229,7 +229,7 @@ def test_simple(args):
             
             """Visualize the colormapped depth image"""
             # import pdb; pdb.set_trace()
-            depth_vis_for_test_simple(depth[0])
+            depth_vis_for_test_simple(scaled_disp[0])
             # cv2.imshow("coloredmapped_im", colormapped_im)
             # cv2.waitKey(10)
             # cv2.destroyAllWindows()

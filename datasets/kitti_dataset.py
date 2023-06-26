@@ -52,7 +52,6 @@ class KITTIDataset(mscrad4r):
     def get_color(self, folder, frame_index, side, do_flip):
         
         color = self.loader(self.get_image_path(folder, frame_index, side))
-        import pdb; pdb.set_trace()
         color_np = np.array(color)
         color_np_rect = self.stereo_rectify(color_np)
         color_rect = pil.fromarray(color_np_rect)
